@@ -75,31 +75,27 @@ if [ -n "${PR_NUMBER}" ] && [ "${INPUT_COMMENT}" == "true" ];then
     echo -e "\u001b[34;1mCommenting on PR: ${PR_NUMBER}"
     echo -e "Screen Shots Link: ${MD_URL}\n${MD_REFS}" > /tmp/body
     git config --global --add safe.directory "${GITHUB_WORKSPACE}"
-    gh pr comment "${PR_NUMBER}" --edit-last --body-file /tmp/body ||
-        gh pr comment "${PR_NUMBER}" --body-file /tmp/body
-    #declare commented
-    #gh pr view "${PR_NUMBER}" --json comments | jq -c '.comments[]' | while read -r comment; do
-    #    login=$(echo "${comment}" | jq -r '.author.login')
-    #    echo "Checking comment by: ${login}"
-    #    if [ "${login}" == "github-actions" ];then
-    #        body=$(echo "${comment}" | jq -r '.body')
-    #        if [[ ${body} == Screen\ Shots\ Link:* ]]; then
-    #            comment_id=$(echo "${comment}" | jq -r '.id')
-    #            echo "Editing existing comment: ${comment_id}"
-    #            #comment_url="/repos/${OWNER}/${REPO}/pulls/comments/${comment_id}"
-    #            #echo "Editing existing comment at: ${comment_url}"
-    #            #gh api --method PATCH -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" "${comment_url}" -f "body=$(cat /tmp/body)"
-    #            #gh api --method PATCH "${comment_url}" f body="$(cat /tmp/body)"
-    #            gh pr comment "${PR_NUMBER}" --edit-last --body-file /tmp/body
-    #            commented="yes"
-    #            break
-    #        fi
-    #    fi
-    #done
-    #if [ "${commented}" != "yes" ];then
-    #    echo "Adding new comment."
+    #gh pr comment "${PR_NUMBER}" --edit-last --body-file /tmp/body ||
     #    gh pr comment "${PR_NUMBER}" --body-file /tmp/body
-    #fi
+    gh pr view "${PR_NUMBER}" --json comments | jq -c '.comments[]' | while read -r comment; do
+        login=$(echo "${comment}" | jq -r '.author.login')
+        echo "Checking comment by: ${login}"
+        if [ "${login}" == "github-actions" ];then
+            body=$(echo "${comment}" | jq -r '.body')
+            if [[ ${body} == Screen\ Shots\ Link:* ]]; then
+                comment_id=$(echo "${comment}" | jq -r '.id')
+                echo "Deleting existing comment: ${comment_id}"
+                gh api --method DELETE "/repos/${OWNER}/${REPO}/pulls/comments/${comment_id}"
+                #gh api --method PATCH -H "Accept: application/vnd.github+json" \
+                #    -H "X-GitHub-Api-Version: 2022-11-28" \
+                #    -f "body=$(cat /tmp/body)" \
+                #    "/repos/${OWNER}/${REPO}/pulls/comments/${comment_id}"
+                break
+            fi
+        fi
+    done
+    echo "Adding new comment..."
+    gh pr comment "${PR_NUMBER}" --body-file /tmp/body
 else
     echo -e "\u001b[33mSkipping comment because not PR or comment: \u001b[0m${INPUT_COMMENT}"
 fi
